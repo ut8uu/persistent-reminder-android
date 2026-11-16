@@ -51,12 +51,16 @@ final class Reminders {
     }
     static PendingIntent alarmIntent(Context c,int id) { return PendingIntent.getBroadcast(c,id,new Intent(c,AlarmReceiver.class).setAction("ring").putExtra("id",id),PendingIntent.FLAG_UPDATE_CURRENT|PendingIntent.FLAG_IMMUTABLE); }
     static void schedule(Context c,Event e) {
+        AlarmManager alarms=c.getSystemService(AlarmManager.class);
+        if(Build.VERSION.SDK_INT>=31 && !alarms.canScheduleExactAlarms()) throw new SecurityException("Exact alarm permission required");
         Intent view=new Intent(c,MainActivity.class);
-        c.getSystemService(AlarmManager.class).setAlarmClock(new AlarmManager.AlarmClockInfo(Math.max(e.time,System.currentTimeMillis()+1000),PendingIntent.getActivity(c,e.id,view,PendingIntent.FLAG_UPDATE_CURRENT|PendingIntent.FLAG_IMMUTABLE)),alarmIntent(c,e.id));
+        alarms.setAlarmClock(new AlarmManager.AlarmClockInfo(Math.max(e.time,System.currentTimeMillis()+1000),PendingIntent.getActivity(c,e.id,view,PendingIntent.FLAG_UPDATE_CURRENT|PendingIntent.FLAG_IMMUTABLE)),alarmIntent(c,e.id));
     }
     static PendingIntent action(Context c,int id,String action) { return PendingIntent.getBroadcast(c,id,new Intent(c,AlarmReceiver.class).setAction(action).putExtra("id",id),PendingIntent.FLAG_UPDATE_CURRENT|PendingIntent.FLAG_IMMUTABLE); }
     static void ring(Context c,Event e) {
-        channel(c); e.ringing=true; save(c,e);
+        channel(c);
+        if(Build.VERSION.SDK_INT>=33 && c.checkSelfPermission("android.permission.POST_NOTIFICATIONS")!=android.content.pm.PackageManager.PERMISSION_GRANTED) return;
+        e.ringing=true; save(c,e);
         PendingIntent screen=PendingIntent.getActivity(c,e.id,new Intent(c,AlarmActivity.class).putExtra("id",e.id),PendingIntent.FLAG_UPDATE_CURRENT|PendingIntent.FLAG_IMMUTABLE);
         Notification n=new Notification.Builder(c,CHANNEL).setSmallIcon(ua.reminder.R.drawable.ic_alarm).setContentTitle(e.title).setContentText("Час події настав").setCategory(Notification.CATEGORY_ALARM).setVisibility(Notification.VISIBILITY_PUBLIC).setOngoing(true).setContentIntent(screen).setFullScreenIntent(screen,true)
             .addAction(new Notification.Action.Builder(null,"Виконано",action(c,e.id,"done")).build())

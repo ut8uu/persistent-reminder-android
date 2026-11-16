@@ -11,7 +11,9 @@ public class AlarmActivity extends Activity {
     final Handler handler=new Handler(Looper.getMainLooper());
     final Runnable check=new Runnable() { public void run() { Reminders.Event e=Reminders.find(AlarmActivity.this,id); if(e==null || !e.ringing) finish(); else handler.postDelayed(this,1000); } };
     @Override public void onCreate(Bundle b) {
-        super.onCreate(b); setShowWhenLocked(true); setTurnScreenOn(true);
+        super.onCreate(b);
+        if(Build.VERSION.SDK_INT>=27) { setShowWhenLocked(true); setTurnScreenOn(true); }
+        else getWindow().addFlags(WindowManager.LayoutParams.FLAG_SHOW_WHEN_LOCKED | WindowManager.LayoutParams.FLAG_TURN_SCREEN_ON);
         getWindow().addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON);
         show(getIntent());
     }

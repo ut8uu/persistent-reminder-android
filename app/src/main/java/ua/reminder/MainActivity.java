@@ -11,21 +11,26 @@ import java.util.*;
 
 public class MainActivity extends Activity {
     LinearLayout root;
+    @Override protected void attachBaseContext(Context base) {
+        android.content.res.Configuration config = new android.content.res.Configuration(base.getResources().getConfiguration());
+        config.setLocale(java.util.Locale.ENGLISH);
+        super.attachBaseContext(base.createConfigurationContext(config));
+    }
     @Override public void onCreate(Bundle b) { super.onCreate(b); Reminders.channel(this); }
     @Override protected void onResume() { super.onResume(); render(); }
     TextView text(String s,int size) { TextView t=new TextView(this); t.setText(s); t.setTextSize(size); t.setPadding(0,14,0,14); root.addView(t); return t; }
     void button(String s,Runnable r) { Button b=new Button(this); b.setText(s); b.setOnClickListener(v->r.run()); root.addView(b); }
     void render() {
         ScrollView scroll=new ScrollView(this); root=new LinearLayout(this); root.setOrientation(LinearLayout.VERTICAL); root.setPadding(32,48,32,32); scroll.addView(root); setContentView(scroll);
-        text("Нагадай",32); text("Події, які потребують твоєї уваги",16);
-        if(!Reminders.ready(this)) { text("Налаштуй дозволи, щоб будильник міг спрацювати й відкритися на весь екран.",16); button("Налаштувати дозволи",this::permissions); }
-        button("＋ Додати подію",this::add);
+        text("Persistent Reminder",32); text("Events that need your attention",16);
+        if(!Reminders.ready(this)) { text("Enable the required permissions so alarms can ring and appear full screen.",16); button("Set up permissions",this::permissions); }
+        button("＋ Add event",this::add);
         java.util.List<Reminders.Event> events=Reminders.all(this);
-        if(events.isEmpty()) text("Поки немає подій. Додай перше нагадування.",18);
+        if(events.isEmpty()) text("No events yet. Add your first reminder.",18);
         for(Reminders.Event e:events) {
-            text(e.title,22); text(DateFormat.getDateTimeInstance(DateFormat.MEDIUM,DateFormat.SHORT).format(new Date(e.time))+(e.ringing?" · Час настав":""),16);
-            if(e.ringing) button("Відкрити нагадування",()->startActivity(new Intent(this,AlarmActivity.class).putExtra("id",e.id)));
-            button("Видалити",()->new AlertDialog.Builder(this).setMessage("Видалити «"+e.title+"»?").setPositiveButton("Видалити",(d,w)->{Reminders.finish(this,e.id,false); render();}).setNegativeButton("Скасувати",null).show());
+            text(e.title,22); text(DateFormat.getDateTimeInstance(DateFormat.MEDIUM,DateFormat.SHORT,Locale.ENGLISH).format(new Date(e.time))+(e.ringing?" · Due now":""),16);
+            if(e.ringing) button("Open reminder",()->startActivity(new Intent(this,AlarmActivity.class).putExtra("id",e.id)));
+            button("Delete",()->new AlertDialog.Builder(this).setMessage("Delete “"+e.title+"”?").setPositiveButton("Delete",(d,w)->{Reminders.finish(this,e.id,false); render();}).setNegativeButton("Cancel",null).show());
         }
     }
     void permissions() {
@@ -38,19 +43,19 @@ public class MainActivity extends Activity {
     }
     void add() {
         if(!Reminders.ready(this)) { permissions(); return; }
-        EditText title=new EditText(this); title.setHint("Наприклад: Зустріч із лікарем"); title.setSingleLine(true); title.setFilters(new android.text.InputFilter[]{new android.text.InputFilter.LengthFilter(160)});
-        AlertDialog dialog=new AlertDialog.Builder(this).setTitle("Нова подія").setView(title).setPositiveButton("Обрати дату",null).setNegativeButton("Скасувати",null).create();
+        EditText title=new EditText(this); title.setHint("For example: Doctor’s appointment"); title.setSingleLine(true); title.setFilters(new android.text.InputFilter[]{new android.text.InputFilter.LengthFilter(160)});
+        AlertDialog dialog=new AlertDialog.Builder(this).setTitle("New event").setView(title).setPositiveButton("Choose date",null).setNegativeButton("Cancel",null).create();
         dialog.setOnShowListener(d->dialog.getButton(AlertDialog.BUTTON_POSITIVE).setOnClickListener(v->{
-            String name=title.getText().toString().trim(); if(name.isEmpty()) { title.setError("Введи назву події"); return; }
+            String name=title.getText().toString().trim(); if(name.isEmpty()) { title.setError("Enter an event title"); return; }
             dialog.dismiss(); Calendar time=Calendar.getInstance();
             new DatePickerDialog(this,(date,y,m,day)->{
                 time.set(y,m,day);
                 new TimePickerDialog(this,(picker,h,min)->{
                     time.set(Calendar.HOUR_OF_DAY,h); time.set(Calendar.MINUTE,min); time.set(Calendar.SECOND,0); time.set(Calendar.MILLISECOND,0);
-                    if(time.getTimeInMillis()<=System.currentTimeMillis()) { Toast.makeText(this,"Обери час у майбутньому",Toast.LENGTH_LONG).show(); return; }
+                    if(time.getTimeInMillis()<=System.currentTimeMillis()) { Toast.makeText(this,"Choose a time in the future",Toast.LENGTH_LONG).show(); return; }
                     Reminders.Event e=new Reminders.Event(Reminders.nextId(this),name,time.getTimeInMillis(),false);
                     Reminders.save(this,e);
-                    try { Reminders.schedule(this,e); } catch(SecurityException ex) { Reminders.finish(this,e.id,false); Toast.makeText(this,"Потрібен дозвіл на точні будильники",Toast.LENGTH_LONG).show(); }
+                    try { Reminders.schedule(this,e); } catch(SecurityException ex) { Reminders.finish(this,e.id,false); Toast.makeText(this,"Exact alarm permission is required",Toast.LENGTH_LONG).show(); }
                     render();
                 },time.get(Calendar.HOUR_OF_DAY),time.get(Calendar.MINUTE),true).show();
             },time.get(Calendar.YEAR),time.get(Calendar.MONTH),time.get(Calendar.DAY_OF_MONTH)).show();

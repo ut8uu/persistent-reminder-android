@@ -38,7 +38,7 @@ final class Reminders {
     }
     static NotificationManager nm(Context c) { return c.getSystemService(NotificationManager.class); }
     static void channel(Context c) {
-        NotificationChannel ch=new NotificationChannel(CHANNEL,"Будильники подій",NotificationManager.IMPORTANCE_HIGH);
+        NotificationChannel ch=new NotificationChannel(CHANNEL,"Event alarms",NotificationManager.IMPORTANCE_HIGH);
         ch.setSound(RingtoneManager.getDefaultUri(RingtoneManager.TYPE_ALARM),new AudioAttributes.Builder().setUsage(AudioAttributes.USAGE_ALARM).build());
         ch.enableVibration(true); ch.setVibrationPattern(new long[]{0,700,400,700}); ch.setLockscreenVisibility(Notification.VISIBILITY_PUBLIC); nm(c).createNotificationChannel(ch);
     }
@@ -62,9 +62,9 @@ final class Reminders {
         if(Build.VERSION.SDK_INT>=33 && c.checkSelfPermission("android.permission.POST_NOTIFICATIONS")!=android.content.pm.PackageManager.PERMISSION_GRANTED) return;
         e.ringing=true; save(c,e);
         PendingIntent screen=PendingIntent.getActivity(c,e.id,new Intent(c,AlarmActivity.class).putExtra("id",e.id),PendingIntent.FLAG_UPDATE_CURRENT|PendingIntent.FLAG_IMMUTABLE);
-        Notification n=new Notification.Builder(c,CHANNEL).setSmallIcon(ua.reminder.R.drawable.ic_alarm).setContentTitle(e.title).setContentText("Час події настав").setCategory(Notification.CATEGORY_ALARM).setVisibility(Notification.VISIBILITY_PUBLIC).setOngoing(true).setContentIntent(screen).setFullScreenIntent(screen,true)
-            .addAction(new Notification.Action.Builder(null,"Виконано",action(c,e.id,"done")).build())
-            .addAction(new Notification.Action.Builder(null,"Ще 5 хв",action(c,e.id,"snooze")).build()).build();
+        Notification n=new Notification.Builder(c,CHANNEL).setSmallIcon(ua.reminder.R.drawable.ic_alarm).setContentTitle(e.title).setContentText("Your event is due").setCategory(Notification.CATEGORY_ALARM).setVisibility(Notification.VISIBILITY_PUBLIC).setOngoing(true).setContentIntent(screen).setFullScreenIntent(screen,true)
+            .addAction(new Notification.Action.Builder(null,"Done",action(c,e.id,"done")).build())
+            .addAction(new Notification.Action.Builder(null,"Snooze 5 min",action(c,e.id,"snooze")).build()).build();
         n.flags |= Notification.FLAG_INSISTENT; nm(c).notify(e.id,n);
     }
     static synchronized boolean finish(Context c,int id,boolean snooze) {

@@ -25,6 +25,11 @@ jobs:
         with:
           distribution: temurin
           java-version: '17'
+      - name: Test recurrence rules
+        run: |
+          mkdir -p /tmp/reminder-tests
+          javac -d /tmp/reminder-tests app/src/main/java/ua/reminder/Recurrence.java tests/RecurrenceTest.java
+          java -cp /tmp/reminder-tests ua.reminder.RecurrenceTest
       - name: Set up Android SDK
         uses: android-actions/setup-android@v3
         with:
